@@ -21,17 +21,17 @@ class PhysicsWeightScheduler:
     Manages physics weight scheduling without needing global_step in the model.
     Physics weight ramps: 0 → 1 over specified warmup steps.
     """
-    
+
     def __init__(self, warmup_steps=1000):
         self.warmup_steps = warmup_steps
         self.current_step = 0
         self.physics_weight = 0.0
-    
+
     def step(self):
         """Call once per training iteration."""
         self.physics_weight = min(self.current_step / self.warmup_steps, 1.0)
         self.current_step += 1
-    
+
     def get_weight(self):
         """Get current physics weight."""
         return self.physics_weight
@@ -59,7 +59,7 @@ class BaseGreyBoxFM(nn.Module):
         self.use_vf_phys = use_vf_phys
         self.latent_dim = latent_dim
         self.history_size = history_size
-        self.physics_weight = 1.0 
+        self.physics_weight = 1.0
 
         self.phys_eq = phys_eq
         self.second_order = second_order
@@ -137,7 +137,11 @@ class BaseGreyBoxFM(nn.Module):
             dim=-1,
         )
 
-        if self.use_vf_phys and self.phys_eq is not None and phys_vf is not None:
+        if (
+            self.use_vf_phys
+            and self.phys_eq is not None
+            and phys_vf is not None
+        ):
             new_x = torch.cat([new_x, phys_vf], dim=-1)
 
         if self.history_size > 0 and x_history is not None:
@@ -188,7 +192,11 @@ class BaseGreyBoxFM(nn.Module):
             self.z_sample,
             t,
             t_enc,
-            phys_vf=self.phys_vf if self.use_vf_phys and self.phys_eq is not None else None,
+            phys_vf=(
+                self.phys_vf
+                if self.use_vf_phys and self.phys_eq is not None
+                else None
+            ),
             dt_xt=dt_xt,
             x_history=x_history,
         )  # shape (batch_size, state_dim + phys_params_dim + latent_dim + 2 * num_freqs)
@@ -202,12 +210,12 @@ class BaseGreyBoxFM(nn.Module):
             total_vf = fv_net
 
         return total_vf
-    
+
     def set_physics_weight(self, weight: float):
         """
         Set physics weight (called from scheduler during training).
         During inference, this stays at 1.0.
-        
+
         Args:
             weight: Physics weight in range [0, 1]
         """

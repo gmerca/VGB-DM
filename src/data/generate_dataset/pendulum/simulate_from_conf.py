@@ -3,7 +3,6 @@ from src.io.utils import load_yaml, dict_to_argparse_input
 from src.simulators.pendulum.options import PendulumOptionParser
 from src.data.generate_dataset.pendulum.generate_data import generate_data
 
-
 if __name__ == "__main__":
     # Parse arguments
 

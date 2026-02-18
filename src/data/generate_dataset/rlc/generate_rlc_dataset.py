@@ -59,7 +59,7 @@ def gen_data(
             selected_x = selected_x[sorted_indices, :]
             dataset[i, :, :, :] = selected_x
             timestamps[i, :] = selected_t
-        
+
         full_dataset[i, :, :, :] = x
         full_timestamps[i, :] = t
 
@@ -87,9 +87,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--val_size", type=int, default=100, help="Validation size"
     )
-    parser.add_argument(
-        "--test_size", type=int, default=100, help="Test size"
-    )
+    parser.add_argument("--test_size", type=int, default=100, help="Test size")
     parser.add_argument(
         "--timesteps", type=int, default=200, help="Number of timesteps"
     )
@@ -109,7 +107,17 @@ if __name__ == "__main__":
     with torch.no_grad():
         args = parser.parse_args()
         with open(
-            r"%s/train_size_%d_%s.pkl" % (path, args.tr_size, f"irregular_{args.n_rnd_points}" if args.irregular_sampling else "regular"), "wb"
+            r"%s/train_size_%d_%s.pkl"
+            % (
+                path,
+                args.tr_size,
+                (
+                    f"irregular_{args.n_rnd_points}"
+                    if args.irregular_sampling
+                    else "regular"
+                ),
+            ),
+            "wb",
         ) as output_file:
             pickle.dump(
                 gen_data(

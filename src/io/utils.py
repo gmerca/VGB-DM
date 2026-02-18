@@ -67,4 +67,3 @@ class ResultEncoder(json.JSONEncoder):
         if isinstance(obj, Exception):
             return str(obj)
         return json.JSONEncoder.default(self, obj)
-

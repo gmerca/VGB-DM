@@ -118,7 +118,6 @@ def generate_data(args):
     n_stoch_samples = args.n_stoch_samples if args.n_stoch_samples > 1 else 1
     gamma_samples = None
 
-
     if args.range_gamma is not None:
         if args.range_gamma[1] == args.range_gamma[0]:
             gamma_samples = (
@@ -129,7 +128,7 @@ def generate_data(args):
                 (args.n_samples, n_stoch_samples)
             )
         else:
-            
+
             # n_samples \times  n_stoch_samples
             gamma_samples = dist_sampler(
                 args.gamma_dist,
@@ -167,7 +166,7 @@ def generate_data(args):
                     (args.n_samples, n_stoch_samples)
                 )
             else:
-                
+
                 f_samples = dist_sampler(
                     args.f_dist,
                     args.range_f[0],
@@ -193,7 +192,7 @@ def generate_data(args):
     # Initialize parameters tensor
     true_params = torch.empty((args.n_samples, n_stoch_samples, param_dim))
     logger.info(f"Parameters shape: {true_params.shape}")
-    
+
     logger.info(f"Generating data using the forward model")
     for i in range(args.n_samples):
         for j in range(args.n_stoch_samples):

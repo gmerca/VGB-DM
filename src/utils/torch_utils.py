@@ -287,7 +287,7 @@ def initialize_experiment(
     else:
         with open(wandb_group_path, "r") as f:
             wandb_group = f.read()
-    
+
     wandb_run = wandb.init(
         project=wandb_project,
         group=wandb_group,

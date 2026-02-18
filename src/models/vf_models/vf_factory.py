@@ -10,7 +10,9 @@ from src.models.vf_models.grey_box_fm import BaseGreyBoxFM
 from src.models.vf_models.gb_reactdiff import GBReactDiffVF
 from src.models.node.gb_reactdiff_node import GBReactDiffNODE
 from src.models.node.grey_box_node import BaseGreyBoxNODE
-from src.simulators.lorenz_attractor.lorenz_model import LorenzAttractorDynamics
+from src.simulators.lorenz_attractor.lorenz_model import (
+    LorenzAttractorDynamics,
+)
 
 
 from src.models.node.grey_box_node import BaseGreyBoxNODE
@@ -35,12 +37,13 @@ def _get_physical_equation(exp_name, vf_config, device, logger):
         "reactdiff": lambda: ReactDiffDynamics(
             dx=vf_config.get("dx", 0.1), device=device
         ),
-        "lorenz": lambda: LorenzAttractorDynamics(params=None, full=False).to(device),
+        "lorenz": lambda: LorenzAttractorDynamics(params=None, full=False).to(
+            device
+        ),
     }
 
     if exp_name in phys_eq_map:
         return phys_eq_map[exp_name]()
-
 
     return None
 
@@ -145,9 +148,13 @@ def _build_conditional_mlp(exp_config, device):
     history_size = vf_config.get("history_size", 0)
     if p_dim > 0 and vf_config.get("vf_phys", False):
         conditional_dim = (
-            z_dim + p_dim + t_freq_dim * 2 + dim_state + (history_size) * dim_state
+            z_dim
+            + p_dim
+            + t_freq_dim * 2
+            + dim_state
+            + (history_size) * dim_state
         )
-    else:   
+    else:
         conditional_dim = (
             z_dim + p_dim + t_freq_dim * 2 + (history_size) * dim_state
         )

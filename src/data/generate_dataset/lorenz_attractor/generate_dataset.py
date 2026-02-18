@@ -10,14 +10,17 @@ from tqdm import trange
 import os
 import json
 
-from src.simulators.lorenz_attractor.lorenz_model import LorenzAttractorDynamics
+from src.simulators.lorenz_attractor.lorenz_model import (
+    LorenzAttractorDynamics,
+)
 from src.utils.hash import dict_hash
 
+
 def generate_lorenz_dataset(
-    n_trajectories: int=1000,
-    dt: float=0.025,
-    tmin: float=0.0,
-    tmax: float=4.0,
+    n_trajectories: int = 1000,
+    dt: float = 0.025,
+    tmin: float = 0.0,
+    tmax: float = 4.0,
     seed: int = 42,
     irregular_sampling=False,
     n_rnd_points=50,
@@ -27,20 +30,22 @@ def generate_lorenz_dataset(
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    
+
     os.makedirs(output_path, exist_ok=True)
-    
+
     time_points = torch.arange(tmin, tmax, dt)
     n_points = len(time_points)
-    
-    lorenz_dynamics = LorenzAttractorDynamics(params=torch.zeros(1, 3), full=True)
+
+    lorenz_dynamics = LorenzAttractorDynamics(
+        params=torch.zeros(1, 3), full=True
+    )
     node = ode_solver(
-                lorenz_dynamics,
-                sensitivity="adjoint",
-                solver="dopri5",
-                atol=1e-10,
-                rtol=1e-10,
-            )
+        lorenz_dynamics,
+        sensitivity="adjoint",
+        solver="dopri5",
+        atol=1e-10,
+        rtol=1e-10,
+    )
     time_points = torch.linspace(tmin, tmax, n_points)
     full_traj = []
     trajs = []
@@ -48,22 +53,24 @@ def generate_lorenz_dataset(
     full_ts = []
     ts = []
 
-
-    #init_cond = sample_initial_conditions()
+    # init_cond = sample_initial_conditions()
     with torch.no_grad():
         for _ in trange(n_trajectories):
             params = lorenz_dynamics.sample_parameters()
-            params_tensor = torch.tensor(params, dtype=torch.float32).unsqueeze(0)
+            params_tensor = torch.tensor(
+                params, dtype=torch.float32
+            ).unsqueeze(0)
             lorenz_dynamics.params = params_tensor
             init_cond = lorenz_dynamics.sample_initial_conditions()
-            
-            init_tensor = torch.tensor(init_cond, dtype=torch.float32).unsqueeze(0)
+
+            init_tensor = torch.tensor(
+                init_cond, dtype=torch.float32
+            ).unsqueeze(0)
             traj = node.trajectory(init_tensor, time_points)
             full_traj.append(traj.squeeze(0).numpy())
             full_ts.append(time_points.numpy())
             parameters.append(params)
-        
-        
+
     # make hash out of the arguments used to generate the dataset
     dict_args = {
         "n_trajectories": n_trajectories,
@@ -77,22 +84,22 @@ def generate_lorenz_dataset(
     # save dataset into pytorch file with hash as filename
 
     filename = f"lorenz_data_seed_{seed}_{hashed_exp}.pt"
-    
+
     if irregular_sampling:
-        filename = f"lorenz_data_irr_{n_rnd_points}_seed_{seed}_{hashed_exp}.pt"
+        filename = (
+            f"lorenz_data_irr_{n_rnd_points}_seed_{seed}_{hashed_exp}.pt"
+        )
         x_full = np.array(full_traj)
         t_full = np.array(full_ts)
         x = []
         ts = []
         for i in range(x_full.shape[0]):
             idxs = np.sort(
-                np.random.choice(
-                    n_points, size = (n_rnd_points), replace=False
-                )
+                np.random.choice(n_points, size=(n_rnd_points), replace=False)
             )
             x.append(x_full[i, idxs, :])
             ts.append(t_full[i, idxs])
-        
+
         x = np.array(x)
         ts = np.array(ts)
     else:
@@ -100,7 +107,6 @@ def generate_lorenz_dataset(
         ts = np.array(full_ts)
         x_full = np.array(full_traj)
         t_full = np.array(full_ts)
-
 
     save_dict = {
         "exp_config": dict_args,
@@ -111,7 +117,7 @@ def generate_lorenz_dataset(
         "params": np.array(parameters),
     }
 
-    # print all shapes 
+    # print all shapes
     print(f"x shape: {x.shape}")
     print(f"t shape: {ts.shape}")
     print(f"x_full shape: {x_full.shape}")
@@ -134,18 +140,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--n_trajectories", type=int, default=1000, help="Number of trajectories"
 )
-parser.add_argument(
-    "--dt", type=float, default=0.0338, help="Time step" 
-)
-parser.add_argument(
-    "--tmin", type=float, default=0.0, help="Minimum time"
-)
-parser.add_argument(
-    "--tmax", type=float, default=2.0, help="Maximum time"
-)
-parser.add_argument(
-    "--seed", type=int, default=42, help="Random seed"
-)
+parser.add_argument("--dt", type=float, default=0.0338, help="Time step")
+parser.add_argument("--tmin", type=float, default=0.0, help="Minimum time")
+parser.add_argument("--tmax", type=float, default=2.0, help="Maximum time")
+parser.add_argument("--seed", type=int, default=42, help="Random seed")
 parser.add_argument(
     "--irregular_sampling",
     action="store_true",
@@ -159,7 +157,10 @@ parser.add_argument(
     help="Number of random points for irregular sampling",
 )
 parser.add_argument(
-    "--output_path", type=str, default="./experiments/dataset/lorenz_attractor", help="Output path"
+    "--output_path",
+    type=str,
+    default="./experiments/dataset/lorenz_attractor",
+    help="Output path",
 )
 
 if __name__ == "__main__":
@@ -182,8 +183,3 @@ if __name__ == "__main__":
         n_rnd_points=args.n_rnd_points,
         output_path=args.output_path,
     )
-    
-
-    
-    
-    

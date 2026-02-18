@@ -13,7 +13,7 @@ class LorenzEncoder(nn.Module):
     Lightweight temporal encoder for Lorenz system.
     - Uses simple GRU to process sequences
     - Separates physics parameters (p) from stochastic latent (z)
-    
+
     Input shape: (batch_size, len_episode, state_dim) -> (batch_size, len_episode, 3)
     """
 
@@ -57,26 +57,40 @@ class LorenzEncoder(nn.Module):
         # Prior parameters
         if p_prior_mean is not None:
             if isinstance(p_prior_mean, (list, tuple)):
-                self.p_prior_mean = torch.tensor(p_prior_mean, device=device, dtype=torch.float32)
+                self.p_prior_mean = torch.tensor(
+                    p_prior_mean, device=device, dtype=torch.float32
+                )
             else:
                 self.p_prior_mean = p_prior_mean.to(device)
         else:
-            self.p_prior_mean = torch.zeros(p_dim, device=device, dtype=torch.float32)
+            self.p_prior_mean = torch.zeros(
+                p_dim, device=device, dtype=torch.float32
+            )
 
         if p_prior_std is not None:
             if isinstance(p_prior_std, (list, tuple)):
-                self.p_prior_std = torch.tensor(p_prior_std, device=device, dtype=torch.float32)
+                self.p_prior_std = torch.tensor(
+                    p_prior_std, device=device, dtype=torch.float32
+                )
             else:
                 self.p_prior_std = p_prior_std.to(device)
         else:
-            self.p_prior_std = torch.ones(p_dim, device=device, dtype=torch.float32)
+            self.p_prior_std = torch.ones(
+                p_dim, device=device, dtype=torch.float32
+            )
 
         if prior_U_bounds is not None:
             if isinstance(prior_U_bounds, torch.Tensor):
-                self.register_buffer("uniform_low", prior_U_bounds[:, 0].to(device))
-                self.register_buffer("uniform_high", prior_U_bounds[:, 1].to(device))
+                self.register_buffer(
+                    "uniform_low", prior_U_bounds[:, 0].to(device)
+                )
+                self.register_buffer(
+                    "uniform_high", prior_U_bounds[:, 1].to(device)
+                )
             else:
-                bounds_tensor = torch.tensor(prior_U_bounds, device=device, dtype=torch.float32)
+                bounds_tensor = torch.tensor(
+                    prior_U_bounds, device=device, dtype=torch.float32
+                )
                 self.register_buffer("uniform_low", bounds_tensor[:, 0])
                 self.register_buffer("uniform_high", bounds_tensor[:, 1])
 
@@ -132,15 +146,21 @@ class LorenzEncoder(nn.Module):
         z_mean = self.z_mean_proj(h_z)
         z_logstd = self.z_logstd_proj(h_z)
 
-        # ========== Physics extraction physics 
+        # ========== Physics extraction physics
         if self.p_dim > 0:
-            h_p_input = torch.cat([h_gru, z_mean.detach()], dim=1)  # Detach z_mean to reduce coupling
+            h_p_input = torch.cat(
+                [h_gru, z_mean.detach()], dim=1
+            )  # Detach z_mean to reduce coupling
             h_p = self.p_head(h_p_input)
             p_mean = self.p_mean_proj(h_p)
             p_logstd = self.p_logstd_proj(h_p)
         else:
-            p_mean = torch.zeros(batch_size, self.p_dim, device=self.device, dtype=x.dtype)
-            p_logstd = torch.zeros(batch_size, self.p_dim, device=self.device, dtype=x.dtype)
+            p_mean = torch.zeros(
+                batch_size, self.p_dim, device=self.device, dtype=x.dtype
+            )
+            p_logstd = torch.zeros(
+                batch_size, self.p_dim, device=self.device, dtype=x.dtype
+            )
 
         return p_mean, p_logstd, z_mean, z_logstd
 
@@ -204,7 +224,9 @@ class LorenzEncoder(nn.Module):
         else:
             p_sample = (
                 p_mean.unsqueeze(1)
-                + torch.randn(p_mean.size(0), z_size, self.p_dim, device=self.device)
+                + torch.randn(
+                    p_mean.size(0), z_size, self.p_dim, device=self.device
+                )
                 * p_std.unsqueeze(1)
                 if p_mean is not None
                 else None
@@ -232,7 +254,9 @@ class LorenzEncoder(nn.Module):
             "z_kl": z_kl,
         }
 
-    def sample_priors(self, batch_size: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def sample_priors(
+        self, batch_size: int
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Sample from prior distributions."""
         if self.p_prior_type == "uniform":
             p_sample = (

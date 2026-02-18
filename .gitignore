@@ -24,8 +24,8 @@ dist/
 cached_datasets/
 era5_data/
 logs/
+outputs/
 wandb/
-
 
 # Compiled Java class files
 *.class

@@ -37,13 +37,15 @@ def get_encoder(exp_config, device):
             device=device,
         ).to(device)
     else:
-        
+
         if "len_episode" not in enc_config:
             # backward compatibility
-            enc_config["len_episode"] = enc_config.get("d_dim", 50) // enc_config.get("p_dim", 2)
+            enc_config["len_episode"] = enc_config.get(
+                "d_dim", 50
+            ) // enc_config.get("p_dim", 2)
         if "state_dim" not in enc_config:
             enc_config["state_dim"] = exp_config["vf_model"]["dim_state"]
-            
+
         enc_model = VariationalEncoder(
             len_episode=enc_config["len_episode"],
             state_dim=enc_config["state_dim"],

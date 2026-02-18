@@ -189,10 +189,10 @@ class ReactDiffEncoder(BaseEncoder):
             self.x_cleansed = (
                 x + delta
             )  # xp contains x_obs and the augmentation delta given by z_a
-            
+
             h_p = self.nnet_h_p(self.x_cleansed)
             p_mean, p_logstd = self.p_proj(h_p), self.p_logstd_proj(h_p)
-            
+
         else:
             p_mean = p_logstd = None
 

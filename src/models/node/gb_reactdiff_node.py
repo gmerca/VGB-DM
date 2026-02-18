@@ -42,9 +42,7 @@ class GBReactDiffNODE(BaseGreyBoxNODE):
             input_conv_dim += 1  # self.t_enc_dim
 
         vf_nnet = torch.nn.Sequential(
-            Conv2d(
-                input_conv_dim, 16, 3, padding=1
-            ), 
+            Conv2d(input_conv_dim, 16, 3, padding=1),
             act_fun(),
             Conv2d(16, 16, 3, padding=1),
             act_fun(),

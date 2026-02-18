@@ -85,7 +85,7 @@ class PendulumOptionParser:
             nargs="+",
             help="If 0, each parameter is sampled independently. If 1, only used for bernoulli or categorical dist to sample parameters as single set.",
         )
-        
+
         parser.add_argument(
             "--div_eps", type=float, default=None, required=False
         )

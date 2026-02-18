@@ -23,16 +23,17 @@ from src.utils.hash import get_exp_dir_path
 
 from src.models.vf_models.grey_box_fm import PhysicsWeightScheduler
 
+
 class KLAnnealingScheduler:
     def __init__(self, beta_target: float = 0.1, anneal_steps: int = 5000):
         self.beta_target = beta_target
         self.anneal_steps = anneal_steps
         self.current_step = 0
-    
+
     def get_beta(self):
         progress = min(self.current_step / self.anneal_steps, 1.0)
         return self.beta_target * progress
-    
+
     def step(self):
         self.current_step += 1
 
@@ -135,10 +136,15 @@ def train_model(
     coeff_R = exp_config["optimization"].get(
         "coeff_R", 0.0
     )  # Regularization coefficient
-    if exp_config["optimization"].get("use_kl_annealing", False) and enc_model is not None:
+    if (
+        exp_config["optimization"].get("use_kl_annealing", False)
+        and enc_model is not None
+    ):
         kl_scheduler = KLAnnealingScheduler(
             beta_target=exp_config["optimization"].get("beta_p", 0.1),
-            anneal_steps=exp_config["optimization"].get("kl_anneal_steps", 5000),
+            anneal_steps=exp_config["optimization"].get(
+                "kl_anneal_steps", 5000
+            ),
         )
     else:
         kl_scheduler = None
@@ -162,8 +168,14 @@ def train_model(
     logger.info(f"Using device: {vf_model.device}")
 
     # Initialize physics weight scheduler
-    if exp_config["vf_model"].get("phys_model", False) and exp_config["optimization"].get("phys_weight_scheduler", False):
-        physics_scheduler = PhysicsWeightScheduler(warmup_steps=exp_config["optimization"].get("phys_warming_steps", 100))
+    if exp_config["vf_model"].get("phys_model", False) and exp_config[
+        "optimization"
+    ].get("phys_weight_scheduler", False):
+        physics_scheduler = PhysicsWeightScheduler(
+            warmup_steps=exp_config["optimization"].get(
+                "phys_warming_steps", 100
+            )
+        )
     else:
         physics_scheduler = None
 
@@ -297,7 +309,7 @@ def train_model(
                 )
             # Forward pass
             if physics_scheduler is not None:
-                vf_model.set_physics_weight(physics_scheduler.get_weight())  
+                vf_model.set_physics_weight(physics_scheduler.get_weight())
             out_vt = vf_model.forward_train(
                 x=x_t,
                 p_sample=p_sample,
@@ -329,7 +341,7 @@ def train_model(
             # Schedulers steps
             if kl_scheduler is not None:
                 kl_scheduler.step()
-                
+
                 if wandb.run is not None:
                     wandb.log({"beta/kl": kl_scheduler.get_beta()}, step=epoch)
             if scheduler is not None and scheduler_type == "step_based":
@@ -338,7 +350,7 @@ def train_model(
                     f"Scheduler update: learning rate: {scheduler.get_last_lr()}"
                 )
             if physics_scheduler is not None:
-                physics_scheduler.step()  
+                physics_scheduler.step()
 
             history_enc_loss.append(enc_kl.detach())
             history_fm.append(fm_loss.detach())
@@ -627,7 +639,7 @@ def train_model(
         # Delete all wandb logs
         # shutil.rmtree(f"/dev/shm/{wandb_group}")
         # remove the files of the directory if exists of ./wandb/* using os
-        #if os.path.exists(f"./wandb/"):
+        # if os.path.exists(f"./wandb/"):
         #    shutil.rmtree(f"./wandb/")
         #    logger.info("Wandb logs removed")
 

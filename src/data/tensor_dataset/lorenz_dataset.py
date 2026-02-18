@@ -36,14 +36,20 @@ class LorenzDataset(data.Dataset):
         dataset = torch.load(
             data_path, weights_only=False, map_location=device
         )
-        x = torch.tensor(dataset["x"].squeeze(), dtype=torch.float32, device=device) # n_samples, n_timesteps, 3
-        
+        x = torch.tensor(
+            dataset["x"].squeeze(), dtype=torch.float32, device=device
+        )  # n_samples, n_timesteps, 3
+
         self.dim_state = x.shape[2]
         self.X = x
-        self.timestamps = torch.tensor(dataset["t"], dtype=torch.float32, device=device)
+        self.timestamps = torch.tensor(
+            dataset["t"], dtype=torch.float32, device=device
+        )
         self.params = dataset.get("params", None)
         if self.params is not None:
-            self.params = torch.tensor(self.params, dtype=torch.float32, device=device)
+            self.params = torch.tensor(
+                self.params, dtype=torch.float32, device=device
+            )
             self.params = self.params[:, [0, 2]]  # sigma and beta
         self.sample_params = sample_params
 

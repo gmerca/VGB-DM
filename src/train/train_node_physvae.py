@@ -518,7 +518,7 @@ def train_physvae(
         # Delete all wandb logs
         # shutil.rmtree(f"/dev/shm/{wandb_group}")
         # remove the files of the directory if exists of ./wandb/* using os
-        #if os.path.exists(f"./wandb/"):
+        # if os.path.exists(f"./wandb/"):
         #    shutil.rmtree(f"./wandb/")
         #    logger.info("Wandb logs removed")
 

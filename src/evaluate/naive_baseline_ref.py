@@ -13,12 +13,10 @@ from torch.utils.data import DataLoader
 from src.evaluate.evaluate import compute_scores
 
 
-
-
 def evaluate_exp(
     val_loader=None,
     dataset_path="./experiments/dataset/RLC/test_size_100.pkl",
-    exp_name = "rlc",
+    exp_name="rlc",
     max_length: int = 25,
     seed=3,
 ):
@@ -27,11 +25,9 @@ def evaluate_exp(
     exp_config["dataset"]["data_path_tr"] = dataset_path
     exp_config["dataset"]["data_path_va"] = dataset_path
     exp_config["name_exp"] = exp_name
-    exp_config["sampler"]= {} 
+    exp_config["sampler"] = {}
     exp_config["sampler"]["max_length"] = max_length
     exp_config["vf_model"] = {}
-    
-
 
     _, val_dataset = get_dataset(exp_config, only_testset=True)
     val_loader = DataLoader(
@@ -61,20 +57,19 @@ def evaluate_exp(
         x_f, t_f = x_traj[:, max_length:, :], t_traj[:, max_length:]
 
         x_last = x_in[:, -1, :]
-        x_last = x_last.flatten(start_dim=1).unsqueeze(1).repeat(1, t_f.shape[1], 1)
+        x_last = (
+            x_last.flatten(start_dim=1).unsqueeze(1).repeat(1, t_f.shape[1], 1)
+        )
         x_last = x_last.reshape_as(x_f)
-        res = compute_scores(X=x_f, Y=x_last,metrics=["mse", "mae", "n_mse"])
+        res = compute_scores(X=x_f, Y=x_last, metrics=["mse", "mae", "n_mse"])
 
-    # compute the mean 
+    # compute the mean
     score = {}
     for key in res:
         if key not in score:
             score[key] = []
 
-        score[key].append(
-            res[key].cpu().numpy()
-        )
-        
+        score[key].append(res[key].cpu().numpy())
 
     print(f"Evaluation scores: {score}")
     return score
@@ -117,7 +112,7 @@ def main():
     torch.manual_seed(args.seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
-    
+
     scores = evaluate_exp(
         dataset_path=args.dataset_path,
         exp_name=args.exp_name,

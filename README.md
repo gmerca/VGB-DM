@@ -1,24 +1,35 @@
 # Variational Grey-Box Dynamic Matching (VGB-DM)
 
-## Conda Environment
-To create the conda environment, run the following command:
+This repository contains the official implementation of the paper **Variational Grey-Box Dynamic Matching**, accepted at AISTATS 2026.
 
-```bash
-conda create -n vgb-dm python=3.12
-conda activate vgb-dm
-```
-Then, install the required packages:
-```bash
-pip install -r requirements.txt     
-```
-build the package
-```bash
-pip install -e .
-```
+## TL;DR
 
-## Dataset
-To generate each task dataset, please follow the instructions below.
+VGB-DM is a novel approach for learning the dynamics of physical systems that combines incomplete physics models with data-driven deep generative methods. Unlike traditional simulation-based approaches that rely on expensive ODE solvers during training, VGB-DM adopts a simulation-free framework inspired by Flow Matching, enabling scalable and stable learning of high-dimensional dynamics. The method employs structured variational inference with separate latent variables to model stochasticity in the dynamics and infer unknown physical parameters, allowing it to capture complex multi-modal behaviours while maintaining interpretability. We applied VGB-DM various ODE/PDE systems and weather forecasting tasks compared to state-of-the-art baselines.
 
+## Installation
+
+1.  **Create and activate the Conda environment:**
+
+    ```bash
+    conda create -n vgb-dm python=3.12
+    conda activate vgb-dm
+    ```
+
+2.  **Install the required packages:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+3.  **Install the project in editable mode:**
+
+    ```bash
+    pip install -e .
+    ```
+
+## Dataset Generation
+
+To generate the datasets for each task, follow the instructions below.
 
 ### RLC Circuit
 
@@ -26,33 +37,37 @@ To generate each task dataset, please follow the instructions below.
 python src/data/generate_dataset/rlc/generate_rlc_dataset.py
 ```
 
-By default it saves the dataset in `experiments/dataset/RLC`, including the training and validation/test datasets.
+This command saves the training and validation/test datasets in `experiments/dataset/RLC`.
 
 ### Damped Pendulum
-```bash
-python src/data/generate_dataset/pendulum/simulate_from_conf.py --seed=1 --n-samples=1000
-```
-Training, validation and test can be generate by changing the seed value.
 
-### Reaction Diffusion
+To generate the training, validation, and test sets, run the following command with different seed values:
+
+```bash
+python src/data/generate_dataset/pendulum/simulate_from_conf.py --seed=<seed_value> --n-samples=1000
+```
+
+### Reaction-Diffusion
 
 ```bash
 python src/data/generate_dataset/reactdiff/make_dataset.py
 ```
 
-To change the number of samples and seed number please edit properties (`n_samples` and `seed`) in the `src/data/generate_dataset/reactdiff/params.yaml` `yaml` file to generate different datasets.
+To change the number of samples and the seed, edit the `n_samples` and `seed` properties in the `src/data/generate_dataset/reactdiff/params.yaml` file.
 
 ### Lorenz System
 
-```bash 
-python src/data/generate_dataset/lorenz_attractor/generate_dataset.py  --seed=3 --n_trajectories=1000
+```bash
+python src/data/generate_dataset/lorenz_attractor/generate_dataset.py --seed=<seed_value> --n_trajectories=1000
 ```
 
-## Run Models and Evaluation
+## Model Training and Evaluation
 
-To run a model training experiment, please have a look at `experiments/scripts/` where you find bash script example file run the training of the models. 
+To run a model training experiment, refer to the bash script examples in `experiments/scripts/` for training different models.
 
-An example command to run VGB-DM on the Lorenz dataset is:
+### Training
+
+An example command to train VGB-DM on the Lorenz dataset:
 
 ```bash
 python src/runner/run_hydra.py --multirun \
@@ -80,15 +95,100 @@ python src/runner/run_hydra.py --multirun \
     exp.seed=3
 ```
 
-Every best checkpoint of the running instance is saved in the `outputs/` directory, the model names comes by a hashed string of the configuration used for the training. You can find the best checkpoint in the `best_chkpt.pth` file in the corresponding model directory.
+The best checkpoint for each training run is saved in the `outputs/` directory. Model directory names are generated from a hashed string of the training configuration. The best checkpoint is stored as `best_chkpt.pth` in the corresponding model directory.
 
-### Model Evaluation
+### Evaluation
 
-To evaluate trained models, use the `evaluate.py` script. The evaluation script will automatically find all model checkpoints in a directory and evaluate them:
+To evaluate trained models, use the `evaluate.py` script, which automatically searches for all model checkpoints in the specified directory:
 
 ```bash
 python src/evaluate/evaluate.py --root_dir=./outputs/lorenz/1cd9c8e5b1a0c7e4f2b1a3d9c8e5b1a0c7e4f2b1a3d9c8e5b1a0c7e4f2b1a3 --dataset_path=./experiments/dataset/lorenz_attractor/test/test_lorenz_data_seed_3_9c8e5b1a0c7e4f2b1a3d9c8e5b1a0c7e4f2b1a3
 ```
-where the arguments are:
-- `--root_dir`: Path to the directory containing all trained model checkpoints (searches recursively for `best_chkpt.pth` files)
+
+Arguments:
+- `--root_dir`: Path to the directory containing trained model checkpoints (searches recursively for `best_chkpt.pth` files)
 - `--dataset_path`: Path to the test dataset file
+
+# Weather and Climate Modelling
+
+## Dataset Preparation
+
+For the climate modelling experiments, we use the ERA5 reanalysis dataset for medium-range weather forecasting (similar to ClimODE). The dataset includes five key meteorological variables: (i) geopotential, (ii) ground temperature, (iii) atmospheric temperature, (iv) and (v) the two ground-level wind components (u10 and v10).
+
+To prepare the dataset:
+
+1. Download ERA5 data with 5.625° resolution from [WeatherBench](https://dataserv.ub.tum.de/index.php/s/m1524895)
+2. Save the data in `experiments/dataset/era5_data`
+
+The required directory structure:
+
+```
+era5_data/
+├── 10m_u_component_of_wind/
+├── 10m_v_component_of_wind/
+├── 2m_temperature/
+├── constants/
+├── geopotential_500/
+└── temperature_850/
+```
+
+
+
+
+## Training
+
+After preparing the dataset, you can train the models using the following commands.
+
+### GB-DM Model
+
+For hourly data:
+
+```bash
+python src/grey_box_clim/gb_dm_train_hourly.py --force_reload
+```
+
+For monthly data:
+
+```bash
+python src/grey_box_clim/gb_dm_train_monthly.py --force_reload
+```
+
+### ClimODE Model
+
+For hourly data:
+
+```bash
+python src/grey_box_clim/climode_train_hourly.py --force_reload
+```
+
+For monthly data:
+
+```bash
+python src/grey_box_clim/climode_train_monthly.py --force_reload
+```
+
+The `--force_reload` flag forces regeneration of cached datasets. Use it when running the model for the first time or after making changes to the dataset generation code.
+
+## Evaluation
+
+To evaluate trained models, use the following commands:
+
+### Hourly Data Evaluation
+
+```bash
+python src/grey_box_clim/evaluation_hourly.py --model=src/grey_box_clim/Models/bests/gb_dm_683e4c13.pt
+```
+
+### Monthly Data Evaluation
+
+```bash
+python src/grey_box_clim/evaluation_monthly.py --model_path=src/grey_box_clim/Models/bests/gb_dm_monthly_7a303583.pt
+```
+
+The `--model` (or `--model_path`) argument should point to the checkpoint of the trained model. Pre-trained checkpoints are available in `src/grey_box_clim/Models/bests/`, while newly trained models are saved in the `outputs/` directory.
+
+To evaluate the naive baseline (using the last observed state for all future predictions), set `--model=data`.
+
+**Note:** Before evaluation, ensure the dataset is prepared and run the training script at least once (for either hourly or monthly data) to generate the cached velocity data. The evaluation script will automatically load cached velocity data if available, or compute and cache it for future use.
+
+

@@ -24,7 +24,12 @@ from src.interpolants.interpolants_fabric import lagrange_interpolation
 
 from src.models.vf_models.vf_factory import get_vf
 
-EVALUATING_METHODS = ["reconstruction", "forecasting", "generation", "elbo-terms"]
+EVALUATING_METHODS = [
+    "reconstruction",
+    "forecasting",
+    "generation",
+    "elbo-terms",
+]
 
 
 def compute_scores(
@@ -334,6 +339,7 @@ def generation_error(
 
     return 0.0
 
+
 def loss_elbo_terms(
     vf_model,
     enc_model,
@@ -343,57 +349,62 @@ def loss_elbo_terms(
     metric_score,
     z_size=1,
 ):
-    
-    if enc_model is not None:    
+
+    if enc_model is not None:
         x_in = x_batch[:, :max_length, :]
         p_mean, p_logstd, z_mean, z_logstd = enc_model.encode(x_in)
         p_kl, z_kl = enc_model.kl_divergence(
-                        p_mean, p_logstd, z_mean, z_logstd
-                    )
+            p_mean, p_logstd, z_mean, z_logstd
+        )
         p_kl, z_kl = p_kl.mean().cpu().numpy(), z_kl.mean().cpu().numpy()
-    else: 
+    else:
         p_mean, z_mean = None, None
         p_kl, z_kl = 0.0, 0.0
-    
-    # interpolant on the data 
+
+    # interpolant on the data
     linear_interp = not getattr(vf_model, "second_order", False)
     latent_repeats = -1
 
-
     # sample randomly windows in the trajectory 20 times
-    
-    if linear_interp: 
-        start_idx = torch.randint(low=max_length, high=x_batch.shape[1]-1, size=(50,))
+
+    if linear_interp:
+        start_idx = torch.randint(
+            low=max_length, high=x_batch.shape[1] - 1, size=(50,)
+        )
         x_k = x_batch[:, start_idx]
         x_k_plus_1 = x_batch[:, start_idx + 1]
         t_k = t_batch[:, start_idx]
         t_k_plus_1 = t_batch[:, start_idx + 1]
         x_c, t_x_c = None, None
     else:
-        start_idx = torch.randint(low=max_length, high=x_batch.shape[1]-2, size=(50,))
+        start_idx = torch.randint(
+            low=max_length, high=x_batch.shape[1] - 2, size=(50,)
+        )
         x_c = x_batch[:, start_idx]
         t_x_c = t_batch[:, start_idx]
-        x_k = x_batch[:, start_idx+1]
+        x_k = x_batch[:, start_idx + 1]
         x_k_plus_1 = x_batch[:, start_idx + 2]
-        t_k = t_batch[:, start_idx+1]
+        t_k = t_batch[:, start_idx + 1]
         t_k_plus_1 = t_batch[:, start_idx + 2]
 
-    # for history 
+    # for history
     history_size = getattr(vf_model, "history_size", 0)
     if history_size > 0:
         traj_windows = x_batch.unfold(1, max_length, 1).movedim(-1, 2)
         x_traj = traj_windows[:, start_idx - max_length]
-        x_history = x_traj[:, :, -history_size :]
+        x_history = x_traj[:, :, -history_size:]
 
     latent_repeats = x_k.shape[1]
     x_k = x_k.flatten(start_dim=0, end_dim=1)
     x_k_plus_1 = x_k_plus_1.flatten(start_dim=0, end_dim=1)
     t_k = t_k.flatten(start_dim=0, end_dim=1)
     t_k_plus_1 = t_k_plus_1.flatten(start_dim=0, end_dim=1)
-    x_history = x_history.flatten(start_dim=0, end_dim=1) if history_size > 0 else None
+    x_history = (
+        x_history.flatten(start_dim=0, end_dim=1) if history_size > 0 else None
+    )
 
     t = torch.rand(x_k.shape[0], 1).to(x_batch.device)
-    if linear_interp:  
+    if linear_interp:
         mu_t, x_t, u_t, t_ut, u_t2 = linear_interpolation(
             x_k,
             x_k_plus_1,
@@ -415,28 +426,30 @@ def loss_elbo_terms(
             t_x_c=t_x_c,
             sigma=getattr(vf_model, "sigma", 0.0),
         )
-    
+
     # repeat p_sample, z_sample if needed
     if enc_model is not None:
         if p_mean is not None:
-            p_mean = p_mean.unsqueeze(1).repeat(1, latent_repeats, 1).flatten(0, 1)        
-        z_mean = z_mean.unsqueeze(1).repeat(1, latent_repeats, 1).flatten(0, 1)
-        
-    out_vt = vf_model.forward_train(
-                x=x_t,
-                p_sample=p_mean,
-                z_sample=z_mean,
-                t=t_ut,
-                dt_xt=None if linear_interp else u_t,
-                x_history=x_history if history_size > 0 else None,
+            p_mean = (
+                p_mean.unsqueeze(1).repeat(1, latent_repeats, 1).flatten(0, 1)
             )
+        z_mean = z_mean.unsqueeze(1).repeat(1, latent_repeats, 1).flatten(0, 1)
+
+    out_vt = vf_model.forward_train(
+        x=x_t,
+        p_sample=p_mean,
+        z_sample=z_mean,
+        t=t_ut,
+        dt_xt=None if linear_interp else u_t,
+        x_history=x_history if history_size > 0 else None,
+    )
     if linear_interp:
         out_vt = out_vt
         acc_loss = 0.0
     else:
         out_vt, out_at = out_vt[:, [0]], out_vt[:, [1]]
         acc_loss = mse_loss(pred=out_at, true=u_t2).cpu().numpy()
-        
+
     fm_loss = mse_loss(pred=out_vt, true=u_t).cpu().numpy()
     res_score = {
         "fm_loss": fm_loss,
@@ -444,9 +457,8 @@ def loss_elbo_terms(
         "z_kl": z_kl,
         "acc_loss": acc_loss,
     }
-    
+
     return res_score
-    
 
 
 def evaluate_model(
@@ -538,7 +550,10 @@ def evaluate_model(
             Y_pred = res["Y"]
             X_true = res["X"]
 
-            if EVALUATING_METHODS[3] in eval_method and exp_config["algorithm"] == "dyn-fm":
+            if (
+                EVALUATING_METHODS[3] in eval_method
+                and exp_config["algorithm"] == "dyn-fm"
+            ):
                 res_score = loss_elbo_terms(
                     vf_model,
                     enc_model,
@@ -551,11 +566,10 @@ def evaluate_model(
                 for key in res_score:
                     if key not in metric_score["elbo_terms_score"]:
                         metric_score["elbo_terms_score"][key] = []
-                        
+
                     metric_score["elbo_terms_score"][key].append(
                         res_score[key]
                     )
-                    
 
     for key in metric_score:
         for key_metric in metric_score[key]:
@@ -603,7 +617,7 @@ def evaluate_model(
             fig_title = f"Rec. Traj. {i+1}"
             title = f"{fig_title} - Avg Score: {avg_score:.4f}, Std: {std_score:.4f}"
             plt.title(title)
-            #plt.savefig(os.path.join(plot_dir, f"trajectory_{i+1}.png"))
+            # plt.savefig(os.path.join(plot_dir, f"trajectory_{i+1}.png"))
 
             # plot figure on wandb if wandb is enabled
             if wandb.run is not None:
@@ -651,9 +665,9 @@ def evaluate_exp(
 
     # backward compatibility
     dic_vf_state = state_dict["vf_model"]
-    
+
     vf_model.load_state_dict(dic_vf_state)
-    
+
     vf_model.eval()
     if enc_model is not None:
         enc_model.load_state_dict(state_dict["enc_model"])
@@ -680,7 +694,11 @@ def evaluate_exp(
         enc_model,
         exp_config,
         val_loader=val_loader,
-        eval_method=[EVALUATING_METHODS[0], EVALUATING_METHODS[1], EVALUATING_METHODS[3]],
+        eval_method=[
+            EVALUATING_METHODS[0],
+            EVALUATING_METHODS[1],
+            EVALUATING_METHODS[3],
+        ],
         z_size=1,
         do_plot=False,
         metrics=metrics,
@@ -691,8 +709,12 @@ def evaluate_exp(
     if save_dir is None:
         save_dir = get_exp_dir_path(exp_config, exp_config["group_exp_name"])
     else:
-        save_dir = os.path.join(save_dir, exp_config["model_exp_name"], "seed_" + str(exp_config["seed"]))
-    
+        save_dir = os.path.join(
+            save_dir,
+            exp_config["model_exp_name"],
+            "seed_" + str(exp_config["seed"]),
+        )
+
     os.makedirs(save_dir, exist_ok=True)
     import pandas as pd
 
@@ -781,9 +803,9 @@ def main():
         )
         print(df_res)
 
-    
-        
-    average_seed_evaluations(root_dir=args.root_dir, group_by_label="model_exp_name")
+    average_seed_evaluations(
+        root_dir=args.root_dir, group_by_label="model_exp_name"
+    )
     print(f"Saved all evaluations in {args.root_dir}")
 
 

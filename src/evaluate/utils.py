@@ -33,14 +33,14 @@ def average_seed_evaluations(root_dir, group_by_label="method"):
             index=False,
         )
         # convert any non-numeric and not a string columns to zero
-        
+
         # for the column that starts with param* if the value are not not numeric, convert to zero
         for col in combined_df.columns:
             if col not in [group_by_label, "seed", "model_exp_name", "method"]:
                 combined_df[col] = pd.to_numeric(
                     combined_df[col], errors="coerce"
                 ).fillna(0)
-        
+
         # select only numeric columns for aggregation
         numeric_cols = combined_df.select_dtypes(include="number").columns
 
